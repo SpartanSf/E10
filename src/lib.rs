@@ -10,9 +10,20 @@ use core::panic::PanicInfo;
 pub mod serial;
 pub mod vga_buffer;
 pub mod interrupts;
+pub mod gdt;
+pub mod memory;
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
+}
 
 pub fn init() {
+    gdt::init();
     interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();     // new
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,10 +66,18 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 }
 
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
-    serial_println!("[ FAIL ]\n");
+    serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    hlt_loop();         // new
+}
+
+#[cfg(test)]
+#[unsafe(no_mangle)]
+pub extern "C" fn _start() -> ! {
+    init();
+    test_main();
+    hlt_loop();         // new
 }
 
 #[cfg(test)]
@@ -68,9 +87,16 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 #[cfg(test)]
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
-    init();      // new
+use bootloader::{entry_point, BootInfo};
+
+#[cfg(test)]
+entry_point!(test_kernel_main);
+
+/// Entry point for `cargo test`
+#[cfg(test)]
+fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
+    // like before
+    init();
     test_main();
-    loop {}
+    hlt_loop();
 }

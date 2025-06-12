@@ -8,10 +8,8 @@ use core::panic::PanicInfo;
 use e10::println;
 
 #[unsafe(no_mangle)] // don't mangle the name of this function
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start() -> () {
     test_main();
-
-    loop {}
 }
 
 #[panic_handler]

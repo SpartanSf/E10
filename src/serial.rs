@@ -1,6 +1,6 @@
-use uart_16550::SerialPort;
-use spin::Mutex;
 use lazy_static::lazy_static;
+use spin::Mutex;
+use uart_16550::SerialPort;
 
 lazy_static! {
     pub static ref SERIAL1: Mutex<SerialPort> = {
@@ -13,9 +13,9 @@ lazy_static! {
 #[doc(hidden)]
 pub fn _print(args: ::core::fmt::Arguments) {
     use core::fmt::Write;
-    use x86_64::instructions::interrupts;       // new
+    use x86_64::instructions::interrupts;
 
-    interrupts::without_interrupts(|| {         // new
+    interrupts::without_interrupts(|| {
         SERIAL1
             .lock()
             .write_fmt(args)
@@ -23,6 +23,7 @@ pub fn _print(args: ::core::fmt::Arguments) {
     });
 }
 
+/// Prints to the host through the serial interface.
 #[macro_export]
 macro_rules! serial_print {
     ($($arg:tt)*) => {
@@ -30,6 +31,7 @@ macro_rules! serial_print {
     };
 }
 
+/// Prints to the host through the serial interface, appending a newline.
 #[macro_export]
 macro_rules! serial_println {
     () => ($crate::serial_print!("\n"));
